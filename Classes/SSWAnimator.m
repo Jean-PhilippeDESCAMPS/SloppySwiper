@@ -32,7 +32,7 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
 
 
 @interface SSWAnimator()
-@property (weak, nonatomic) UIViewController *toViewController;
+@property (weak, nonatomic) UIView *toView;
 @end
 
 @implementation SSWAnimator
@@ -47,25 +47,27 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
 - (void)animateTransition:(id<UIViewControllerContextTransitioning>)transitionContext
 {
     UIViewController *toViewController = [transitionContext viewControllerForKey:UITransitionContextToViewControllerKey];
+    UIView *toView = [transitionContext viewForKey:UITransitionContextToViewKey];
     UIViewController *fromViewController = [transitionContext viewControllerForKey:UITransitionContextFromViewControllerKey];
-    [[transitionContext containerView] insertSubview:toViewController.view belowSubview:fromViewController.view];
+    UIView *fromView = [transitionContext viewForKey:UITransitionContextFromViewKey];
+
+    [[transitionContext containerView] addSubview:toView];
+    [[transitionContext containerView] addSubview:fromView];
 
     // parallax effect; the offset matches the one used in the pop animation in iOS 7.1
     CGFloat toViewControllerXTranslation = - CGRectGetWidth([transitionContext containerView].bounds) * 0.3f;
-    toViewController.view.bounds = [transitionContext containerView].bounds;
-    toViewController.view.center = [transitionContext containerView].center;
-    toViewController.view.transform = CGAffineTransformMakeTranslation(toViewControllerXTranslation, 0);
+    toView.transform = CGAffineTransformMakeTranslation(toViewControllerXTranslation, 0);
 
     // add a shadow on the left side of the frontmost view controller
-    [fromViewController.view addLeftSideShadowWithFading];
-    BOOL previousClipsToBounds = fromViewController.view.clipsToBounds;
-    fromViewController.view.clipsToBounds = NO;
+    [fromView addLeftSideShadowWithFading];
+    BOOL previousClipsToBounds = fromView.clipsToBounds;
+    fromView.clipsToBounds = NO;
 
     // in the default transition the view controller below is a little dimmer than the frontmost one
-    UIView *dimmingView = [[UIView alloc] initWithFrame:toViewController.view.bounds];
+    UIView *dimmingView = [[UIView alloc] initWithFrame:toView.bounds];
     CGFloat dimAmount = [self.delegate animatorTransitionDimAmount:self];
     dimmingView.backgroundColor = [UIColor colorWithWhite:0.0f alpha:dimAmount];
-    [toViewController.view addSubview:dimmingView];
+    [toView addSubview:dimmingView];
 
     // fix hidesBottomBarWhenPushed not animated properly
     UITabBarController *tabBarController = toViewController.tabBarController;
@@ -81,10 +83,10 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
         [tabBar.layer removeAllAnimations];
         
         CGRect tabBarRect = tabBar.frame;
-        tabBarRect.origin.x = toViewController.view.bounds.origin.x;
+        tabBarRect.origin.x = toView.bounds.origin.x;
         tabBar.frame = tabBarRect;
         
-        [toViewController.view addSubview:tabBar];
+        [toView addSubview:tabBar];
         shouldAddTabBarBackToTabBarController = YES;
     }
 
@@ -92,8 +94,8 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
     UIViewAnimationOptions curveOption = [transitionContext isInteractive] ? UIViewAnimationOptionCurveLinear : SSWNavigationTransitionCurve;
 
     [UIView animateWithDuration:[self transitionDuration:transitionContext] delay:0 options:UIViewAnimationOptionTransitionNone | curveOption animations:^{
-        toViewController.view.transform = CGAffineTransformIdentity;
-        fromViewController.view.transform = CGAffineTransformMakeTranslation(toViewController.view.frame.size.width, 0);
+        toView.transform = CGAffineTransformIdentity;
+        fromView.transform = CGAffineTransformMakeTranslation(toView.frame.size.width, 0);
         dimmingView.alpha = 0.0f;
 
     } completion:^(BOOL finished) {
@@ -106,19 +108,19 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
         }
 
         [dimmingView removeFromSuperview];
-        fromViewController.view.transform = CGAffineTransformIdentity;
-        fromViewController.view.clipsToBounds = previousClipsToBounds;
+        fromView.transform = CGAffineTransformIdentity;
+        fromView.clipsToBounds = previousClipsToBounds;
         [transitionContext completeTransition:![transitionContext transitionWasCancelled]];
     }];
 
-    self.toViewController = toViewController;
+    self.toView = toView;
 }
 
 - (void)animationEnded:(BOOL)transitionCompleted
 {
     // restore the toViewController's transform if the animation was cancelled
     if (!transitionCompleted) {
-        self.toViewController.view.transform = CGAffineTransformIdentity;
+        self.toView.transform = CGAffineTransformIdentity;
     }
 }
 
