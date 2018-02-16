@@ -51,6 +51,10 @@ UIViewAnimationOptions const SSWNavigationTransitionCurve = 7 << 16;
     UIViewController *fromViewController = [transitionContext viewControllerForKey:UITransitionContextFromViewControllerKey];
     UIView *fromView = [transitionContext viewForKey:UITransitionContextFromViewKey];
 
+    // If we don't do this and the orientation changed while the toView was off-screen, the toView might be the old orientation's size. (Maybe the system default animator does this, so we just need to replicate that behavior here?)
+    toView.bounds = fromView.bounds;
+    toView.center = fromView.center;
+
     [[transitionContext containerView] addSubview:toView];
     [[transitionContext containerView] addSubview:fromView];
 
